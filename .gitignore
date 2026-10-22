@@ -1,0 +1,7 @@
+# outputs / scratch
+/test/out/
+/logs/
+__pycache__/
+*.pyc
+.snakemake/
+.ipynb_checkpoints/

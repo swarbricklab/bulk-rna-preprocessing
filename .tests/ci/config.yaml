@@ -1,0 +1,26 @@
+# Minimal config for data-independent CI (schema validation + dry-run).
+# Paths are placeholders; no real data is read during validate / -n.
+deps:
+  counts_dir: .tests/ci/individual
+  samplesheet: .tests/ci/samplesheet.csv
+  gencode_gtf: .tests/ci/gencode.gtf.gz
+  hgnc_complete_set: .tests/ci/hgnc_complete_set.txt
+  clinical: .tests/ci/clinical.csv
+outs:
+  gene_annotation: .tests/ci/out/genes.tsv
+  gene_h5ad: .tests/ci/out/gene_counts.h5ad
+  transcript_h5ad: .tests/ci/out/transcript_counts.h5ad
+params:
+  sample_id: gussid
+  samplesheet_id_column: gussid
+  samplesheet_filter: {column: assay, value: wts}
+  obs_from_samplesheet: [donor_id, tissue_id, sample_id]
+  gene_quant_suffix: quant.genes.sf
+  transcript_quant_suffix: quant.sf
+  uqn: {enabled: true, quantile: 75, target: 1000.0}
+  clinical:
+    index_column: tissue_id
+    join_on: tissue_id
+    na_value: "NA"
+    eligibility_report_column: pam50_exclusion_reason
+    columns: [therapeutic_status, clinical_subtype]

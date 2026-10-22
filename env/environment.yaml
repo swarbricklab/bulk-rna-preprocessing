@@ -1,0 +1,12 @@
+name: wts-preprocessing
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - python=3.11
+  - anndata>=0.10
+  - pandas>=2.0
+  - numpy>=1.24
+  - pyyaml>=6.0
+  - h5py>=3.8
+  - snakemake-minimal>=7.32,<8

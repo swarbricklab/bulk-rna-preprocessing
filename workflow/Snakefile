@@ -1,0 +1,83 @@
+from pathlib import Path
+from snakemake.utils import min_version, validate
+
+min_version("7.32.0")
+
+# Fail fast with a clear message if the config is missing/misnamed keys, rather
+# than deep inside a rule. Schema in workflow/schemas/config.schema.yaml.
+validate(config, "schemas/config.schema.yaml")
+
+# The config file this run was launched with (rules re-read it via the CLI so
+# there is one source of truth for paths/params). run.sh / run_test.sh always
+# pass exactly one --configfile.
+CONFIGFILE = workflow.configfiles[0]
+
+SCRIPT = Path(workflow.basedir) / "scripts" / "preprocess.py"
+
+deps = config["deps"]
+outs = config["outs"]
+
+
+include: "rules/common.smk"
+
+
+rule all:
+    input:
+        outs["gene_h5ad"],
+        outs["transcript_h5ad"],
+
+
+rule gene_annotation:
+    """GENCODE GTF -> gene-level annotation TSV (gene_id, gene_name, gene_type, hgnc_id)."""
+    input:
+        gtf=deps["gencode_gtf"],
+    output:
+        tsv=outs["gene_annotation"],
+    params:
+        script=SCRIPT,
+        cfg=CONFIGFILE,
+    conda:
+        "../env/environment.yaml"
+    log:
+        "logs/wts-preprocessing/gene_annotation.log",
+    shell:
+        "python {params.script} gene-annotation --config {params.cfg} > {log} 2>&1"
+
+
+rule gene_h5ad:
+    """Aggregate gene-level Salmon quants -> annotated, UQN-normalised gene_counts.h5ad."""
+    input:
+        tsv=outs["gene_annotation"],
+        counts=deps["counts_dir"],
+        samplesheet=deps["samplesheet"],
+        hgnc=deps["hgnc_complete_set"],
+        clinical=gene_extra_inputs(),
+    output:
+        h5ad=outs["gene_h5ad"],
+    params:
+        script=SCRIPT,
+        cfg=CONFIGFILE,
+    conda:
+        "../env/environment.yaml"
+    log:
+        "logs/wts-preprocessing/gene_h5ad.log",
+    shell:
+        "python {params.script} gene --config {params.cfg} > {log} 2>&1"
+
+
+rule transcript_h5ad:
+    """Aggregate transcript-level Salmon quants -> transcript_counts.h5ad (no annotation/UQN)."""
+    input:
+        counts=deps["counts_dir"],
+        samplesheet=deps["samplesheet"],
+    output:
+        h5ad=outs["transcript_h5ad"],
+    params:
+        script=SCRIPT,
+        cfg=CONFIGFILE,
+    conda:
+        "../env/environment.yaml"
+    log:
+        "logs/wts-preprocessing/transcript_h5ad.log",
+    shell:
+        "python {params.script} transcript --config {params.cfg} > {log} 2>&1"

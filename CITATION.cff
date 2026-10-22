@@ -1,0 +1,39 @@
+# The Zenodo concept DOI is added under `identifiers:` once the first GitHub
+# release mints it. Version and date-released are finalised at release time.
+cff-version: 1.2.0
+message: "If you use this workflow, please cite it using the metadata below."
+version: "0.1.0"
+date-released: "2026-10-22"
+title: "wts-preprocessing: a reusable Salmon-quant to h5ad preprocessing stage for bulk RNA-seq"
+abstract: >-
+  A small, reusable Snakemake workflow that aggregates a tree of per-sample Salmon
+  quantifications into gene- and transcript-level AnnData (.h5ad) objects with
+  upper-quartile (UQN / log2_uqn) normalisation layers, an obs sample/clinical
+  join, and GENCODE + HGNC var annotation (gene_name, gene_type, hgnc_id,
+  entrez_id). It is the bulk-RNA analogue of chromium-preprocessing: a
+  config-driven, containerisable stage that runs standalone or as a git submodule
+  within a DVC-tracked dataset. It is assay/subtyper-agnostic — downstream PAM50
+  intrinsic subtyping (intrinsix) self-identifies its genes from var.entrez_id, so
+  no classifier-specific columns are stamped here.
+type: software
+authors:
+  - given-names: John
+    family-names: Reeves
+    affiliation: "Garvan Institute of Medical Research"
+    email: "j.reeves@garvan.org.au"
+  - given-names: Alexander
+    family-names: Swarbrick
+    affiliation: "Garvan Institute of Medical Research"
+    orcid: "https://orcid.org/0000-0002-3051-5676"
+repository-code: "https://github.com/swarbricklab/wts-preprocessing"
+url: "https://github.com/swarbricklab/wts-preprocessing"
+license: MIT
+keywords:
+  - bulk-RNA-seq
+  - WTS
+  - Salmon
+  - gene-expression
+  - upper-quartile-normalisation
+  - AnnData
+  - h5ad
+  - Snakemake

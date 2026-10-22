@@ -1,0 +1,3 @@
+tissue_id,therapeutic_status,pam50_exclusion_reason,is_pam50_eligible,er_pos,pr_pos,ki67_pos,her2_pos,clinical_subtype,ext_clinical_subtype,is_inferred_ext_clinical_subtype,is_inferred_clinical_subtype,er_percentage,pr_percentage,her2_detailed,ki67_percentage,grade,tissue_type,sample_type,tissue_site,procedure,pathology_type,tissue_ontology_term_id,disease_ontology_term_id
+T1,Naive,NA,TRUE,TRUE,FALSE,FALSE,FALSE,ERpos_HER2neg,LumA,FALSE,FALSE,90,80,Negative,15,2,tumour,FFPE,breast,biopsy,invasive,UBERON:0000310,MONDO:0007254
+T2,Treated (Past),not_primary,FALSE,FALSE,FALSE,TRUE,FALSE,TNBC,TNBC,TRUE,TRUE,1,1,Positive,40,3,tumour,fresh,breast,resection,invasive,UBERON:0000310,MONDO:0007254

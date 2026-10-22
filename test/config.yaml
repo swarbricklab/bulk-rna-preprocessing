@@ -1,0 +1,27 @@
+# Self-contained test config: builds the gene + transcript h5ad from the bundled
+# synthetic fixtures (test/fixtures/) into test/out/. run_test.sh --check compares
+# the result to test/golden/ (produced by the same code, committed).
+deps:
+  counts_dir: test/fixtures/individual
+  samplesheet: test/fixtures/samplesheet.csv
+  gencode_gtf: test/fixtures/gencode.gtf.gz
+  hgnc_complete_set: test/fixtures/hgnc_complete_set.txt
+  clinical: test/fixtures/clinical.csv
+outs:
+  gene_annotation: test/out/genes.tsv
+  gene_h5ad: test/out/gene_counts.h5ad
+  transcript_h5ad: test/out/transcript_counts.h5ad
+params:
+  sample_id: gussid
+  samplesheet_id_column: gussid
+  samplesheet_filter: {column: assay, value: wts}
+  obs_from_samplesheet: [donor_id, tissue_id, sample_id]
+  gene_quant_suffix: quant.genes.sf
+  transcript_quant_suffix: quant.sf
+  uqn: {enabled: true, quantile: 75, target: 1000.0}
+  clinical:
+    index_column: tissue_id
+    join_on: tissue_id
+    na_value: "NA"
+    eligibility_report_column: pam50_exclusion_reason
+    columns: [therapeutic_status, clinical_subtype, pam50_exclusion_reason]

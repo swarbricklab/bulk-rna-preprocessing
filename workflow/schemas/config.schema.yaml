@@ -1,0 +1,73 @@
+$schema: "http://json-schema.org/draft-07/schema#"
+description: >-
+  wts-preprocessing configuration. Validated at workflow start via
+  snakemake.utils.validate() in the Snakefile.
+type: object
+properties:
+  deps:
+    type: object
+    properties:
+      counts_dir:
+        type: string
+        description: Base dir of per-sample Salmon quant subdirs (base/<sample_id>/<*.suffix>).
+      samplesheet:
+        type: string
+        description: Sample sheet CSV (keyed by params.samplesheet_id_column / params.sample_id).
+      gencode_gtf:
+        type: string
+        description: GENCODE annotation GTF (gzipped); source of gene_name/gene_type/hgnc_id.
+      hgnc_complete_set:
+        type: string
+        description: HGNC complete set TSV; source of entrez_id (joined via hgnc_id).
+      clinical:
+        type: string
+        description: Optional clinical metadata CSV for the obs join (needed iff params.clinical is set).
+    required: [counts_dir, samplesheet, gencode_gtf, hgnc_complete_set]
+    additionalProperties: false
+  outs:
+    type: object
+    properties:
+      gene_annotation: {type: string, description: Derived GENCODE gene annotation TSV.}
+      gene_h5ad: {type: string, description: Gene-level AnnData output.}
+      transcript_h5ad: {type: string, description: Transcript-level AnnData output.}
+    required: [gene_annotation, gene_h5ad, transcript_h5ad]
+    additionalProperties: false
+  params:
+    type: object
+    properties:
+      sample_id:
+        type: string
+        description: obs index name; equals the per-sample quant subdir name.
+      samplesheet_id_column:
+        type: string
+        description: Sample-sheet column to key on (defaults to sample_id).
+      samplesheet_filter:
+        type: ["object", "null"]
+        description: Optional row filter {column, value} (e.g. assay == wts).
+        properties:
+          column: {type: ["string", "null"]}
+          value: {type: ["string", "null"]}
+      obs_from_samplesheet:
+        type: array
+        items: {type: string}
+        description: Sample-sheet columns carried into obs.
+      gene_quant_suffix: {type: string, description: Gene quant filename suffix (e.g. quant.genes.sf).}
+      transcript_quant_suffix: {type: string, description: Transcript quant filename suffix (e.g. quant.sf).}
+      uqn:
+        type: object
+        properties:
+          enabled: {type: boolean}
+          quantile: {type: number}
+          target: {type: number}
+      clinical:
+        type: ["object", "null"]
+        description: Optional clinical obs-join block; omit/null to skip.
+        properties:
+          index_column: {type: string}
+          join_on: {type: string}
+          na_value: {type: ["string", "null"]}
+          columns: {type: array, items: {type: string}}
+          eligibility_report_column: {type: ["string", "null"]}
+        required: [index_column, join_on, columns]
+    required: [sample_id, obs_from_samplesheet, gene_quant_suffix, transcript_quant_suffix]
+required: [deps, outs, params]

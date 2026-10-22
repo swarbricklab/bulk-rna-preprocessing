@@ -1,0 +1,5 @@
+gussid,assay,donor_id,tissue_id,sample_id
+WTS_T1_S1,wts,D1,T1,S1
+WTS_T2_S1,wts,D2,T2,S1
+WTS_T3_S1,wts,D3,T3,S1
+DNA_X,wgs,D9,T9,S9
