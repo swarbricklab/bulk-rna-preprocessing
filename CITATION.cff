@@ -4,7 +4,7 @@ cff-version: 1.2.0
 message: "If you use this workflow, please cite it using the metadata below."
 version: "0.1.0"
 date-released: "2026-10-22"
-title: "wts-preprocessing: a reusable Salmon-quant to h5ad preprocessing stage for bulk RNA-seq"
+title: "bulk-rna-preprocessing: a reusable Salmon-quant to h5ad preprocessing stage for bulk RNA-seq"
 abstract: >-
   A small, reusable Snakemake workflow that aggregates a tree of per-sample Salmon
   quantifications into gene- and transcript-level AnnData (.h5ad) objects with
@@ -25,8 +25,8 @@ authors:
     family-names: Swarbrick
     affiliation: "Garvan Institute of Medical Research"
     orcid: "https://orcid.org/0000-0002-3051-5676"
-repository-code: "https://github.com/swarbricklab/wts-preprocessing"
-url: "https://github.com/swarbricklab/wts-preprocessing"
+repository-code: "https://github.com/swarbricklab/bulk-rna-preprocessing"
+url: "https://github.com/swarbricklab/bulk-rna-preprocessing"
 license: MIT
 keywords:
   - bulk-RNA-seq

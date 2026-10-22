@@ -1,9 +1,9 @@
 #! /bin/bash
-# Run the wts-preprocessing workflow.
+# Run the bulk-rna-preprocessing workflow.
 #
 # Standalone:   ./run.sh [extra snakemake args]
-# As a submodule (installed under <parent>/modules/wts-preprocessing), set
-# WTS_PREPROCESSING_CONFIG to the parent repo's config and invoke this script,
+# As a submodule (installed under <parent>/modules/bulk-rna-preprocessing), set
+# BULK_RNA_PREPROCESSING_CONFIG to the parent repo's config and invoke this script,
 # mirroring sc_pileup's run.sh.
 
 set -e
@@ -23,5 +23,5 @@ fi
 
 snakemake $global_profile $workflow_profile \
     --snakefile "$HERE/workflow/Snakefile" \
-    --configfile "${WTS_PREPROCESSING_CONFIG:-$HERE/config/config.yaml}" \
+    --configfile "${BULK_RNA_PREPROCESSING_CONFIG:-$HERE/config/config.yaml}" \
     "$@"

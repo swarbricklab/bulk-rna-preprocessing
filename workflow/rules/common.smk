@@ -1,4 +1,4 @@
-# Shared helpers for the wts-preprocessing workflow.
+# Shared helpers for the bulk-rna-preprocessing workflow.
 
 
 def gene_extra_inputs():

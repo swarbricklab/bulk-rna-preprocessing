@@ -39,7 +39,7 @@ rule gene_annotation:
     conda:
         "../env/environment.yaml"
     log:
-        "logs/wts-preprocessing/gene_annotation.log",
+        "logs/bulk-rna-preprocessing/gene_annotation.log",
     shell:
         "python {params.script} gene-annotation --config {params.cfg} > {log} 2>&1"
 
@@ -60,7 +60,7 @@ rule gene_h5ad:
     conda:
         "../env/environment.yaml"
     log:
-        "logs/wts-preprocessing/gene_h5ad.log",
+        "logs/bulk-rna-preprocessing/gene_h5ad.log",
     shell:
         "python {params.script} gene --config {params.cfg} > {log} 2>&1"
 
@@ -78,6 +78,6 @@ rule transcript_h5ad:
     conda:
         "../env/environment.yaml"
     log:
-        "logs/wts-preprocessing/transcript_h5ad.log",
+        "logs/bulk-rna-preprocessing/transcript_h5ad.log",
     shell:
         "python {params.script} transcript --config {params.cfg} > {log} 2>&1"

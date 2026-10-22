@@ -1,4 +1,4 @@
-name: wts-preprocessing
+name: bulk-rna-preprocessing
 channels:
   - conda-forge
   - bioconda

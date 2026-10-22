@@ -1,10 +1,11 @@
-# wts-preprocessing
+# bulk-rna-preprocessing
 
 A small, reusable [Snakemake](https://snakemake.github.io) workflow that
 aggregates a tree of per-sample [Salmon](https://combine-lab.github.io/salmon/)
 quantifications into **gene-** and **transcript-level** AnnData (`.h5ad`) objects
 with normalisation layers, an obs sample/clinical join, and GENCODE + HGNC var
-annotation.
+annotation. This is the bulk-RNA (WTS, whole-transcriptome sequencing)
+preprocessing stage.
 
 It is the **bulk-RNA analogue of `chromium-preprocessing`**: the same lab
 "a stage is a product" pattern (config-driven, tested, containerisable; runs
@@ -76,7 +77,7 @@ clinical obs columns.
 ./run.sh
 
 # as a submodule, point at the parent repo's config
-WTS_PREPROCESSING_CONFIG=/path/to/parent/config.yaml ./run.sh
+BULK_RNA_PREPROCESSING_CONFIG=/path/to/parent/config.yaml ./run.sh
 
 # or call the config-driven CLI directly (one process, no Snakemake)
 python workflow/scripts/preprocess.py all --config config/config.yaml

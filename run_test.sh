@@ -15,7 +15,7 @@ if ! command -v conda >/dev/null 2>&1; then
     source "${CONDA_PROFILE:-/g/data/a56/conda/miniconda/etc/profile.d/conda.sh}"
 fi
 eval "$(conda shell.bash hook)"
-conda activate "${WTS_PREPROCESSING_ENV:-snakemake_7.32.4}"
+conda activate "${BULK_RNA_PREPROCESSING_ENV:-snakemake_7.32.4}"
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 

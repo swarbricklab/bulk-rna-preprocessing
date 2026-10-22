@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""wts-preprocessing: aggregate per-sample Salmon quant files into h5ad.
+"""bulk-rna-preprocessing: aggregate per-sample Salmon quant files into h5ad.
 
 Config-driven CLI (sub-commands `gene-annotation`, `gene`, `transcript`, `all`)
 that turns a tree of per-sample Salmon quantifications into gene- and
@@ -380,7 +380,7 @@ def cmd_transcript(cfg):
 
 
 def main(argv=None):
-    ap = argparse.ArgumentParser(description="wts-preprocessing: Salmon quants -> h5ad")
+    ap = argparse.ArgumentParser(description="bulk-rna-preprocessing: Salmon quants -> h5ad")
     sub = ap.add_subparsers(dest="command", required=True)
     for name in ("gene-annotation", "gene", "transcript", "all"):
         sp = sub.add_parser(name)

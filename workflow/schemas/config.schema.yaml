@@ -1,6 +1,6 @@
 $schema: "http://json-schema.org/draft-07/schema#"
 description: >-
-  wts-preprocessing configuration. Validated at workflow start via
+  bulk-rna-preprocessing configuration. Validated at workflow start via
   snakemake.utils.validate() in the Snakefile.
 type: object
 properties:

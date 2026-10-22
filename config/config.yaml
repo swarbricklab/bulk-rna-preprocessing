@@ -1,4 +1,4 @@
-# wts-preprocessing — configuration template
+# bulk-rna-preprocessing — configuration template
 #
 # Aggregates a tree of per-sample Salmon quantifications into gene- and
 # transcript-level .h5ad. Copy this file, edit the paths/params, and run
