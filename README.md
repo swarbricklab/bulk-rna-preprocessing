@@ -45,12 +45,18 @@ above, `var` index = transcript IDs. No annotation / UQN / clinical join.
 
 ```
 config/config.yaml              # configuration template (parameterised)
+pyproject.toml                  # installable package (src/ layout; CLI via python -m)
 env/environment.yaml            # conda env for the aggregation step
 containers/Dockerfile           # containerised CLI
+src/bulk_rna_preprocessing/
+  lib.py                        # the library (counting / UQN / annotation / join)
+  _steps/{gene_annotation,gene,transcript}.py  # one typed run() per stage
+  _dispatch.py                  # binds run() from snakemake OR CLI (vendored; see docs/dev)
+  _cli.py  __main__.py          # CLI built from the same run() signatures
 workflow/
   Snakefile                     # rules: gene_annotation -> gene_h5ad; transcript_h5ad
   rules/common.smk
-  scripts/preprocess.py         # the CLI + library (counting / UQN / annotation / join)
+  scripts/{gene_annotation,gene,transcript}.py  # 3-line script: shims -> dispatch()
   schemas/config.schema.yaml    # validated at workflow start
 profiles/workflow/config.yaml   # per-rule resources, use-conda
 test/                           # self-contained synthetic fixture + golden + comparator
@@ -79,9 +85,11 @@ clinical obs columns.
 # as a submodule, point at the parent repo's config
 BULK_RNA_PREPROCESSING_CONFIG=/path/to/parent/config.yaml ./run.sh
 
-# or call the config-driven CLI directly (one process, no Snakemake)
-python workflow/scripts/preprocess.py all --config config/config.yaml
-#   sub-commands: gene-annotation | gene | transcript | all
+# or drive a single stage via the CLI (one process, no Snakemake); the Snakemake
+# shims and this CLI are built from the same typed step functions
+PYTHONPATH=src python -m bulk_rna_preprocessing gene-annotation \
+    --config config/config.yaml --gencode-gtf ... --gene-annotation ...
+#   sub-commands: gene-annotation | gene | transcript  (see --help)
 ```
 
 The aggregation reads every per-sample quant file into memory, so on a full
