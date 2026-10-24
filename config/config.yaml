@@ -1,47 +1,49 @@
-# bulk-rna-preprocessing — configuration template
+# bulk-rna-preprocessing — configuration TEMPLATE
 #
 # Aggregates a tree of per-sample Salmon quantifications into gene- and
-# transcript-level .h5ad. Copy this file, edit the paths/params, and run
-# (./run.sh, or as a DVC/submodule stage). Schema:
+# transcript-level .h5ad. Copy this file, edit the paths/params for your cohort,
+# and run (./run.sh, or as a DVC/submodule stage). Schema:
 # workflow/schemas/config.schema.yaml.
 #
-# Reusable: every path, the sample-id column, the samplesheet row filter, the
+# This is a starting point, not a runnable example — the paths below are
+# placeholders. Every path, the sample-id column, the samplesheet row filter, the
 # obs columns, the UQN quantile/target and the (optional) clinical join are read
-# from here, so bcarc_wts and brca_mega_atlas-data share one implementation.
+# from here, so different cohorts share one implementation by swapping this file.
+# For a fully self-contained, runnable config see test/config.yaml.
 
 # -- Inputs -- #
 deps:
   # Base dir of per-sample Salmon quant subdirs: counts_dir/<sample_id>/<*.suffix>.
-  counts_dir: "data/wts/counts/individual"
+  counts_dir: "data/counts/individual"
   # Sample sheet CSV, keyed by params.samplesheet_id_column (default: sample_id).
   samplesheet: "config/samplesheet.csv"
   # GENCODE annotation GTF (gzipped) — source of gene_name / gene_type / hgnc_id.
-  gencode_gtf: "resources/gencode_v39/gencode.v39.annotation.gtf.gz"
+  gencode_gtf: "resources/gencode/gencode.annotation.gtf.gz"
   # HGNC complete set TSV — source of entrez_id (joined via hgnc_id).
   hgnc_complete_set: "resources/hgnc_complete_set.txt"
   # Optional clinical metadata CSV for the obs join. Only read when params.clinical
   # is set (below); drop both to produce h5ads with no clinical obs columns.
-  clinical: "data/meta/clinical/tissues.csv"
+  clinical: "data/clinical.csv"
 
 # -- Outputs -- #
 outs:
-  gene_annotation: "resources/gencode_v39/gencode_v39_genes.tsv"
-  gene_h5ad: "data/wts/counts/gene_counts.h5ad"
-  transcript_h5ad: "data/wts/counts/transcript_counts.h5ad"
+  gene_annotation: "resources/gencode/genes.tsv"
+  gene_h5ad: "data/counts/gene_counts.h5ad"
+  transcript_h5ad: "data/counts/transcript_counts.h5ad"
 
 # -- Parameters -- #
 params:
   # obs index name; equals the per-sample quant subdir name under counts_dir.
-  sample_id: "gussid"
+  sample_id: "sample_id"
   # Sample-sheet column to key on (defaults to sample_id if omitted).
-  samplesheet_id_column: "gussid"
-  # Optional row filter, e.g. keep only WTS rows of a multi-assay sheet.
+  samplesheet_id_column: "sample_id"
+  # Optional row filter, e.g. keep only RNA rows of a multi-assay sheet.
   # Set column: null to use every row.
   samplesheet_filter:
     column: "assay"
     value: "wts"
   # Sample-sheet columns carried into obs (besides the index).
-  obs_from_samplesheet: ["donor_id", "tissue_id", "sample_id"]
+  obs_from_samplesheet: ["donor_id", "tissue_id"]
   # Salmon quant filename suffixes.
   gene_quant_suffix: "quant.genes.sf"
   transcript_quant_suffix: "quant.sf"
@@ -53,34 +55,16 @@ params:
     quantile: 75
     target: 1000.0
   # Optional clinical obs-join. Omit this whole block (and deps.clinical) for a
-  # cohort with no clinical table. columns are fanned onto obs by matching
-  # obs[join_on] against the clinical table's index_column.
+  # cohort with no clinical table. `columns` are fanned onto obs by matching
+  # obs[join_on] against the clinical table's index_column — list only the few you
+  # need; add/remove freely to suit your cohort.
   clinical:
     index_column: "tissue_id"
     join_on: "tissue_id"
     na_value: "NA"
-    eligibility_report_column: "pam50_exclusion_reason"   # print-only; NA = eligible
+    # Print-only eligibility summary at load; NA = eligible. Set null to skip.
+    eligibility_report_column: null
     columns:
       - "therapeutic_status"
-      - "pam50_exclusion_reason"
-      - "is_pam50_eligible"
-      - "er_pos"
-      - "pr_pos"
-      - "ki67_pos"
-      - "her2_pos"
       - "clinical_subtype"
-      - "ext_clinical_subtype"
-      - "is_inferred_ext_clinical_subtype"
-      - "is_inferred_clinical_subtype"
-      - "er_percentage"
-      - "pr_percentage"
-      - "her2_detailed"
-      - "ki67_percentage"
       - "grade"
-      - "tissue_type"
-      - "sample_type"
-      - "tissue_site"
-      - "procedure"
-      - "pathology_type"
-      - "tissue_ontology_term_id"
-      - "disease_ontology_term_id"
