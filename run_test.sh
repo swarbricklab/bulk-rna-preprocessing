@@ -34,7 +34,20 @@ snakemake \
 
 if [[ "$check" == true ]]; then
     echo "=== comparing test/out to test/golden ==="
-    python3 "$HERE/test/compare_h5ad.py" "$HERE/test/golden/gene_counts.h5ad" "$HERE/test/out/gene_counts.h5ad"
-    python3 "$HERE/test/compare_h5ad.py" "$HERE/test/golden/transcript_counts.h5ad" "$HERE/test/out/transcript_counts.h5ad"
+    # compare_h5ad.py needs anndata. The launcher env (snakemake_7.32.4) only has
+    # Snakemake, not anndata — the deps live in the per-rule conda env that
+    # use-conda builds from env/environment.yaml. Run the comparison with that
+    # env's python so --check works regardless of what launched run_test.sh.
+    mapfile -t _envs < <(compgen -G "$HERE/.snakemake/conda/*/bin/python" || true)
+    if [[ ${#_envs[@]} -eq 1 ]]; then
+        PY="${_envs[0]}"
+    else
+        echo "warn: expected exactly one built conda env under .snakemake/conda," \
+             "found ${#_envs[@]}; using 'python' (needs anndata on PATH)" >&2
+        PY=python
+    fi
+    for h in gene_counts.h5ad transcript_counts.h5ad; do
+        "$PY" "$HERE/test/compare_h5ad.py" "$HERE/test/golden/$h" "$HERE/test/out/$h"
+    done
     echo "OK: test output matches golden"
 fi

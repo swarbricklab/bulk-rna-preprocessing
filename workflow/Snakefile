@@ -1,4 +1,5 @@
 from pathlib import Path
+
 from snakemake.utils import min_version, validate
 
 min_version("7.32.0")
@@ -7,20 +8,25 @@ min_version("7.32.0")
 # than deep inside a rule. Schema in workflow/schemas/config.schema.yaml.
 validate(config, "schemas/config.schema.yaml")
 
-# The config file this run was launched with (rules re-read it via the CLI so
-# there is one source of truth for paths/params). run.sh / run_test.sh always
-# pass exactly one --configfile.
-CONFIGFILE = workflow.configfiles[0]
-
-SCRIPT = Path(workflow.basedir) / "scripts" / "preprocess.py"
-
 deps = config["deps"]
 outs = config["outs"]
+
+# src/ dir of the bulk_rna_preprocessing package (src/ layout). Each rule passes
+# this as params.pkg_src so the shim can put it on sys.path from inside the job:
+# Snakemake scrubs PYTHONPATH for --use-conda jobs, and the package is not
+# pip-installed into the per-rule env.
+PKG_SRC = str((Path(workflow.basedir).parent / "src").resolve())
 
 
 include: "rules/common.smk"
 
 
+# Each rule runs a 3-line scripts/*.py shim that calls dispatch(run, globals()):
+# the bulk_rna_preprocessing._dispatch dispatcher binds the step's typed run()
+# parameters from these input/output/params namespaces (matched by name) and from
+# config, so the heavy logic stays in the installable library. The package is put
+# on PYTHONPATH by run.sh / run_test.sh (src/ layout); the conda env supplies the
+# scientific deps.
 rule all:
     input:
         outs["gene_h5ad"],
@@ -30,54 +36,53 @@ rule all:
 rule gene_annotation:
     """GENCODE GTF -> gene-level annotation TSV (gene_id, gene_name, gene_type, hgnc_id)."""
     input:
-        gtf=deps["gencode_gtf"],
+        gencode_gtf=deps["gencode_gtf"],
     output:
-        tsv=outs["gene_annotation"],
+        gene_annotation=outs["gene_annotation"],
     params:
-        script=SCRIPT,
-        cfg=CONFIGFILE,
+        pkg_src=PKG_SRC,
     conda:
         "../env/environment.yaml"
     log:
         "logs/bulk-rna-preprocessing/gene_annotation.log",
-    shell:
-        "python {params.script} gene-annotation --config {params.cfg} > {log} 2>&1"
+    script:
+        "scripts/gene_annotation.py"
 
 
 rule gene_h5ad:
     """Aggregate gene-level Salmon quants -> annotated, UQN-normalised gene_counts.h5ad."""
     input:
-        tsv=outs["gene_annotation"],
-        counts=deps["counts_dir"],
+        gene_annotation=outs["gene_annotation"],
+        counts_dir=deps["counts_dir"],
         samplesheet=deps["samplesheet"],
-        hgnc=deps["hgnc_complete_set"],
+        hgnc_complete_set=deps["hgnc_complete_set"],
+        # DAG dependency only when a clinical obs-join is configured; the gene step
+        # reads the clinical path from config, so this has no matching run() param.
         clinical=gene_extra_inputs(),
     output:
-        h5ad=outs["gene_h5ad"],
+        gene_h5ad=outs["gene_h5ad"],
     params:
-        script=SCRIPT,
-        cfg=CONFIGFILE,
+        pkg_src=PKG_SRC,
     conda:
         "../env/environment.yaml"
     log:
         "logs/bulk-rna-preprocessing/gene_h5ad.log",
-    shell:
-        "python {params.script} gene --config {params.cfg} > {log} 2>&1"
+    script:
+        "scripts/gene.py"
 
 
 rule transcript_h5ad:
     """Aggregate transcript-level Salmon quants -> transcript_counts.h5ad (no annotation/UQN)."""
     input:
-        counts=deps["counts_dir"],
+        counts_dir=deps["counts_dir"],
         samplesheet=deps["samplesheet"],
     output:
-        h5ad=outs["transcript_h5ad"],
+        transcript_h5ad=outs["transcript_h5ad"],
     params:
-        script=SCRIPT,
-        cfg=CONFIGFILE,
+        pkg_src=PKG_SRC,
     conda:
         "../env/environment.yaml"
     log:
         "logs/bulk-rna-preprocessing/transcript_h5ad.log",
-    shell:
-        "python {params.script} transcript --config {params.cfg} > {log} 2>&1"
+    script:
+        "scripts/transcript.py"

@@ -1,54 +1,21 @@
-#!/usr/bin/env python3
-"""bulk-rna-preprocessing: aggregate per-sample Salmon quant files into h5ad.
+"""bulk-rna-preprocessing core library: Salmon quants -> h5ad.
 
-Config-driven CLI (sub-commands `gene-annotation`, `gene`, `transcript`, `all`)
-that turns a tree of per-sample Salmon quantifications into gene- and
-transcript-level AnnData (.h5ad) objects with normalisation layers.
+Pure, Snakemake-free functions — the counting, UQN/log2_uqn normalisation, obs
+sample/clinical join, var GENCODE+HGNC annotation and transcript aggregation.
+Both the workflow (`script:` shims via :mod:`bulk_rna_preprocessing._dispatch`)
+and the CLI (:mod:`bulk_rna_preprocessing._cli`) call these through the thin
+``_steps.*.run`` wrappers, so the algorithm lives in exactly one place.
 
 This is the standalone, reusable, PAM50-agnostic extraction of
-brca_mega_atlas-data's modules/preprocessing/scripts/preprocess.py. The counting,
-UQN/log2_uqn normalisation, obs sample/clinical join, var GENCODE+HGNC annotation
-and transcript aggregation are a faithful, behaviour-preserving port; the only
-intentional change is that the PAM50 var stamping (is_pam50 / pam50_symbol /
-in_proliferation) and its pam50_annotation.txt dependency have been removed.
-Downstream PAM50 subtyping (intrinsix) self-identifies its 50 genes from
-var.entrez_id, which this module still stamps.
-
-Everything that was hard-coded to one dataset (paths, the sample-id column, the
-samplesheet row filter, which samplesheet/clinical columns land in obs, and the
-UQN quantile/target) is now read from the config, so both bcarc_wts and
-brca_mega_atlas-data (and any Salmon WTS cohort) can drive it.
-
-Outputs
--------
-gene <gene_h5ad>
-    X                 = NumReads (raw counts, float32)
-    layers.tpm        = TPM
-    layers.eff_length = EffectiveLength
-    layers.uqn        = upper-quartile normalised counts (UQ scaled to `target`)
-    layers.log2_uqn   = log2(UQN) with 0 -> 1 substitution
-    obs index         = params.sample_id (from the quant subdir name)
-    obs.<...>         = params.obs_from_samplesheet columns + optional clinical join
-    var index         = gene IDs (e.g. versioned ENSG, from the quant `Name` column)
-    var.Length        = gene length (from the quant `Length` column)
-    var.gene_name     = HGNC symbol (GENCODE GTF)
-    var.gene_type     = biotype (GENCODE GTF)
-    var.hgnc_id       = HGNC ID (GENCODE GTF)
-    var.entrez_id     = NCBI Entrez gene ID (HGNC complete set, via hgnc_id)
-
-transcript <transcript_h5ad>
-    X / layers.tpm / layers.eff_length as above; var index = transcript IDs; no
-    annotation / UQN / clinical join (unchanged from the original).
-
-Usage
------
-    preprocess.py gene-annotation --config config.yaml
-    preprocess.py gene            --config config.yaml
-    preprocess.py transcript      --config config.yaml
-    preprocess.py all             --config config.yaml
+brca_mega_atlas-data's modules/preprocessing/scripts/preprocess.py: a faithful,
+behaviour-preserving port with the PAM50 var stamping (is_pam50 / pam50_symbol /
+in_proliferation) and its pam50_annotation.txt dependency removed. Downstream
+PAM50 subtyping (intrinsix) self-identifies its 50 genes from var.entrez_id,
+which this still stamps.
 """
 
-import argparse
+from __future__ import annotations
+
 import gzip
 import os
 import re
@@ -58,20 +25,21 @@ from pathlib import Path
 import anndata as ad
 import numpy as np
 import pandas as pd
-import yaml
 
 
 # ---------------------------------------------------------------------------
-# Config
+# Config helpers
 # ---------------------------------------------------------------------------
 
-def read_config(path):
-    with open(path) as fh:
-        return yaml.safe_load(fh)
-
-
-def _params(cfg):
+def params(cfg: dict) -> dict:
     return cfg.get("params") or {}
+
+
+def samplesheet_from_config(cfg: dict, samplesheet_path) -> pd.DataFrame:
+    """Load the samplesheet keyed by the configured id column, with the filter."""
+    p = params(cfg)
+    id_col = p.get("samplesheet_id_column") or p["sample_id"]
+    return load_samplesheet(str(samplesheet_path), id_col, p.get("samplesheet_filter"))
 
 
 # ---------------------------------------------------------------------------
@@ -303,103 +271,3 @@ def coerce_object_columns_for_h5ad(adata):
         for col in frame.columns:
             if frame[col].dtype == object:
                 frame[col] = frame[col].astype("category")
-
-
-# ---------------------------------------------------------------------------
-# Sub-commands
-# ---------------------------------------------------------------------------
-
-def _resolve_gene_annotation(cfg):
-    """Return the gene-annotation DataFrame, extracting the TSV if absent."""
-    tsv = cfg["outs"]["gene_annotation"]
-    if os.path.exists(tsv):
-        print(f"  Loading cached {tsv}")
-        return load_gene_annotation(tsv)
-    print(f"  Extracting from {cfg['deps']['gencode_gtf']} ...")
-    return extract_gene_annotation(cfg["deps"]["gencode_gtf"], tsv)
-
-
-def cmd_gene_annotation(cfg):
-    print("=== Gene annotation ===")
-    tsv = cfg["outs"]["gene_annotation"]
-    if os.path.exists(tsv):
-        print(f"  {tsv} already exists; nothing to do")
-        return
-    extract_gene_annotation(cfg["deps"]["gencode_gtf"], tsv)
-
-
-def _sample_sheet(cfg):
-    p = _params(cfg)
-    id_col = p.get("samplesheet_id_column") or p["sample_id"]
-    return load_samplesheet(cfg["deps"]["samplesheet"], id_col, p.get("samplesheet_filter"))
-
-
-def cmd_gene(cfg):
-    p = _params(cfg)
-    samplesheet = _sample_sheet(cfg)
-    gene_annot = _resolve_gene_annotation(cfg)
-    hgnc_df = load_hgnc(cfg["deps"]["hgnc_complete_set"])
-
-    print("=== Gene counts ===")
-    adata = aggregate(cfg["deps"]["counts_dir"], p["gene_quant_suffix"], samplesheet,
-                      p["sample_id"], p["obs_from_samplesheet"])
-    print(f"  Shape: {adata.shape}")
-    print("  Annotating genes ...")
-    annotate_genes(adata, gene_annot, hgnc_df)
-    uqn = p.get("uqn") or {}
-    if uqn.get("enabled", True):
-        print("  Computing UQN + log2(UQN) ...")
-        add_uqn_layers(adata, uqn.get("quantile", 75), uqn.get("target", 1000.0))
-    clinical = p.get("clinical")
-    if clinical:
-        print("  Joining clinical metadata ...")
-        clinical_df = load_clinical(cfg["deps"]["clinical"], clinical["index_column"],
-                                    clinical["columns"], clinical.get("na_value", "NA"))
-        annotate_obs_with_clinical(adata, clinical_df, clinical["columns"],
-                                   clinical["join_on"],
-                                   clinical.get("eligibility_report_column"))
-    coerce_object_columns_for_h5ad(adata)
-    out = cfg["outs"]["gene_h5ad"]
-    os.makedirs(os.path.dirname(out) or ".", exist_ok=True)
-    adata.write_h5ad(out)
-    print(f"  Wrote {out}")
-
-
-def cmd_transcript(cfg):
-    p = _params(cfg)
-    samplesheet = _sample_sheet(cfg)
-    print("=== Transcript counts ===")
-    adata = aggregate(cfg["deps"]["counts_dir"], p["transcript_quant_suffix"], samplesheet,
-                      p["sample_id"], p["obs_from_samplesheet"])
-    print(f"  Shape: {adata.shape}")
-    coerce_object_columns_for_h5ad(adata)
-    out = cfg["outs"]["transcript_h5ad"]
-    os.makedirs(os.path.dirname(out) or ".", exist_ok=True)
-    adata.write_h5ad(out)
-    print(f"  Wrote {out}")
-
-
-def main(argv=None):
-    ap = argparse.ArgumentParser(description="bulk-rna-preprocessing: Salmon quants -> h5ad")
-    sub = ap.add_subparsers(dest="command", required=True)
-    for name in ("gene-annotation", "gene", "transcript", "all"):
-        sp = sub.add_parser(name)
-        sp.add_argument("--config", required=True, help="Path to config.yaml")
-    args = ap.parse_args(argv)
-    cfg = read_config(args.config)
-
-    if args.command == "gene-annotation":
-        cmd_gene_annotation(cfg)
-    elif args.command == "gene":
-        cmd_gene(cfg)
-    elif args.command == "transcript":
-        cmd_transcript(cfg)
-    elif args.command == "all":
-        cmd_gene(cfg)
-        print()
-        cmd_transcript(cfg)
-    print("\n=== Done ===")
-
-
-if __name__ == "__main__":
-    main()

@@ -1,0 +1,47 @@
+[build-system]
+requires = ["setuptools>=61", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "bulk-rna-preprocessing"
+description = "Aggregate per-sample Salmon quantifications into gene- and transcript-level AnnData (.h5ad)."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { file = "LICENSE" }
+authors = [{ name = "John Reeves", email = "j.reeves@garvan.org.au" }]
+keywords = ["rna-seq", "salmon", "anndata", "snakemake", "preprocessing"]
+dynamic = ["version"]
+
+# The library + CLI. The Snakemake `script:` dispatch path needs only the
+# scientific stack (also pinned in env/environment.yaml); `click` is for the CLI
+# (python -m bulk_rna_preprocessing) and is imported lazily by the dispatcher.
+dependencies = [
+    "anndata>=0.10",
+    "pandas>=2.0",
+    "numpy>=1.24",
+    "pyyaml>=6.0",
+    "click>=8.0",
+]
+
+[project.optional-dependencies]
+# Fast unit tests over the library + stage run() functions (test/test_unit.py).
+tests = ["pytest"]
+
+[project.urls]
+Homepage = "https://github.com/swarbricklab/bulk-rna-preprocessing"
+Repository = "https://github.com/swarbricklab/bulk-rna-preprocessing"
+
+# No console_scripts entry point yet: this is a workflow stage driven by
+# run.sh / Snakemake, not an installed end-user tool. The CLI is reached via
+# `python -m bulk_rna_preprocessing`; promoting it to a `brp` command later is a
+# two-line addition if it earns product status.
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["bulk_rna_preprocessing*"]
+
+[tool.setuptools.dynamic]
+version = { attr = "bulk_rna_preprocessing.__version__" }
