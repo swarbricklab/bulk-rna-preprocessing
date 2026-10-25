@@ -1,29 +1,32 @@
-"""Universal entry-point dispatcher for workflow stages.
+"""Universal entry-point dispatcher for workflow stages — the trident core.
 
-VENDORED from swarbricklab/spotty (src/spotty/_dispatch.py @ 006747fc),
-the proving ground for a shared "workflow / CLI / library trinity" that is
-intended to become a standalone package (working name `trident`). See
-docs/dev/dispatch-provenance.md in this repo for the running inventory of
-what in here is generic vs. what is still spotty-specific. Changes made on
-vendoring are marked ``# [vendor]``; the only behavioural one is a
-format-agnostic (YAML or JSON) CLI config loader — spotty hardcoded JSON.
+trident binds one typed ``run(...)`` function per workflow stage to two entry
+points from a single signature:
 
-Each workflow stage exposes one typed `run(...)` function in
-`<package>._steps.<stage>`. The dispatcher resolves that function's
-parameters from either the Snakemake-injected ``snakemake`` global or
-from click-parsed CLI args, validates inputs/outputs, and emits a verbose
-telemetry banner so the parameter binding is visible in logs rather than
-hidden in shim plumbing.
+  * :func:`dispatch` — the Snakemake side. Called from a 3-line ``script:`` shim,
+    it resolves ``run``'s parameters from the injected ``snakemake`` object.
+  * :func:`as_click_command` / :func:`build_cli` — the CLI side. The same
+    ``run`` becomes a ``click`` command built from its signature, so the CLI and
+    the workflow can never drift.
+
+The heavy logic stays in a plain, importable library the ``run`` functions call,
+so it is unit-testable with no Snakemake and no CLI runner (see docs/testing.md).
 
 Special parameter names:
-  * ``config: dict`` is bound to ``snakemake.config`` (the whole config dict).
-  * ``log_path: Path | None`` is bound to ``snakemake.log[0]`` if any.
+  * ``config: dict`` is bound to ``snakemake.config`` (Snakemake) or a
+    ``--config`` file loaded as YAML or JSON (CLI).
+  * ``log_path: Path | None`` is bound to ``snakemake.log[0]`` / ``--log``.
   * any other parameter is looked up in ``input``, then ``output``, then
     ``wildcards``, then ``params`` — first hit wins.
 
 The dispatcher classifies inputs vs outputs by *source namespace*
 (``input`` → input, ``output`` → output), not by name heuristics, so the
 pre-flight + output-existence checks are unambiguous.
+
+VENDORED COPY — do not edit here. Synced from swarbricklab/trident
+(src/trident/_dispatch.py @ 85de91d, v0.0.1). To change behaviour, update trident
+and re-sync this file. trident is not a runtime dependency of this workflow, so
+the dispatcher travels inside the package; see docs/dev/dispatch-provenance.md.
 """
 
 from __future__ import annotations
@@ -41,9 +44,8 @@ from pathlib import Path
 def _load_config_file(path) -> dict:
     """Load a workflow config file as a dict (YAML or JSON, by extension).
 
-    [vendor] spotty's CLI loaded config as JSON only; this repo's configs are
-    YAML. ``.yaml``/``.yml`` → yaml.safe_load; anything else → json.loads.
-    A generic, format-agnostic loader is a candidate for the shared package.
+    ``.yaml``/``.yml`` → yaml.safe_load; anything else → json.loads. Format-
+    agnostic so the CLI works with either; yaml is imported lazily.
     """
     text = Path(path).read_text(encoding="utf-8")
     if str(path).lower().endswith((".yaml", ".yml")):
@@ -57,7 +59,7 @@ def _load_config_file(path) -> dict:
 
 def dispatch(fn, runtime_globals: dict | None = None) -> None:
     """Run ``fn`` from Snakemake (if ``snakemake`` is in ``runtime_globals``)
-    or fail with a clear error pointing at the ``spotty`` CLI.
+    or raise with a clear error.
 
     Call as ``dispatch(run, globals())`` from a workflow shim — the
     ``globals()`` dict is how Snakemake's ``script:`` directive injects
@@ -72,26 +74,47 @@ def dispatch(fn, runtime_globals: dict | None = None) -> None:
         return
 
     raise RuntimeError(
-        "dispatch() called outside Snakemake. Use the package CLI "
-        "(`python -m bulk_rna_preprocessing ...`); or invoke the "
-        "underlying _steps.*.run function directly."
+        "dispatch() found no `snakemake` object in the given globals: it must be "
+        "called from a Snakemake `script:` shim as dispatch(run, globals()). "
+        "To run the stage outside Snakemake, use the package CLI "
+        "(as_click_command / build_cli) or call the underlying run() directly."
     )
 
 
-def as_click_command(fn, *, name: str | None = None):
+def dispatch_by_rule(runtime_globals: dict, steps_package: str) -> None:
+    """Shim entry that maps ``snakemake.rule`` -> ``<steps_package>.<rule>.run``.
+
+    A single generic shim for a whole workflow: every rule points its ``script:``
+    at the same file, which calls ``dispatch_by_rule(globals(), "pkg._steps")``.
+    Requires the rule name to equal the step module name.
+    """
+    snake = (runtime_globals or {}).get("snakemake")
+    if snake is None:
+        raise RuntimeError("dispatch_by_rule must be called from a Snakemake script: shim.")
+    import importlib
+
+    module = importlib.import_module(f"{steps_package}.{snake.rule}")
+    dispatch(module.run, runtime_globals)
+
+
+def as_click_command(fn, *, name: str | None = None, short_flags: dict | None = None):
     """Build a ``click.Command`` from ``fn``'s typed signature.
 
-    Each non-special parameter becomes a ``--kebab-case`` option whose
-    click type is derived from the annotation. Common parameters also get a
-    one-letter alias (``-i`` / ``-o`` / ``-g`` / …) that does not replace the
-    long name. ``config`` is exposed as ``-c`` / ``--config-json PATH``;
-    ``log_path`` is exposed as ``-l`` / ``--log PATH``. Required parameters
-    have ``required=True``; defaults flow through verbatim.
+    Each non-special parameter becomes a ``--kebab-case`` option whose click type
+    is derived from the annotation. ``config`` is exposed as ``-c`` /
+    ``--config PATH`` (loaded as YAML or JSON); ``log_path`` is exposed as ``-l``
+    / ``--log PATH``. Required parameters have ``required=True``; defaults flow
+    through verbatim.
+
+    ``short_flags`` optionally maps parameter names to one-letter aliases
+    (e.g. ``{"in_bam": "-i", "out_h5ad": "-o"}``); an alias is added only when it
+    does not collide. Pass your own domain vocabulary — trident ships none.
 
     When invoked, the callback runs through the same ``_run_with_telemetry``
     pipeline as the Snakemake path, with sources tagged ``--option-name``.
     """
-    import click  # local import — click is in the [workflow] extras only
+    short_flags = short_flags or {}
+    import click  # local import — click is an optional ([cli]) dependency
 
     sig = inspect.signature(fn)
     hints = _safe_get_type_hints(fn)
@@ -102,9 +125,6 @@ def as_click_command(fn, *, name: str | None = None):
         if name_ == "config":
             options.append(
                 click.Option(
-                    # [vendor] spotty exposed this as --config-json (JSON only);
-                    # generalised to --config accepting YAML or JSON by extension,
-                    # since this repo's configs are YAML.
                     _flag_names("--config", "-c", used_shorts),
                     type=click.Path(exists=True, dir_okay=False, path_type=Path),
                     required=False,
@@ -152,7 +172,7 @@ def as_click_command(fn, *, name: str | None = None):
             option_kwargs["type"] = click_type
 
         long = "--" + name_.replace("_", "-")
-        names = _flag_names(long, _SHORT_BY_PARAM.get(name_), used_shorts)
+        names = _flag_names(long, short_flags.get(name_), used_shorts)
         options.append(click.Option(names, **option_kwargs))
 
     def callback(**raw):
@@ -192,6 +212,48 @@ def as_click_command(fn, *, name: str | None = None):
     )
 
 
+def build_cli(
+    steps_package: str,
+    *,
+    name: str,
+    help: str | None = None,
+    version: str | None = None,
+    short_flags: dict | None = None,
+):
+    """Assemble a ``click.Group`` from every ``run`` in a steps package.
+
+    Auto-discovers the submodules of ``steps_package`` that expose a ``run``
+    function and adds one ``as_click_command`` per module (command name =
+    module name with underscores -> hyphens), so the CLI is derived from the same
+    typed signatures the Snakemake shims dispatch to.
+    """
+    import importlib
+    import pkgutil
+
+    import click
+
+    pkg = importlib.import_module(steps_package)
+
+    @click.group(
+        name=name, help=help, context_settings={"help_option_names": ["-h", "--help"]}
+    )
+    def group() -> None:
+        pass
+
+    if version is not None:
+        group = click.version_option(version, prog_name=name)(group)
+
+    for modinfo in sorted(pkgutil.iter_modules(pkg.__path__), key=lambda m: m.name):
+        module = importlib.import_module(f"{steps_package}.{modinfo.name}")
+        run = getattr(module, "run", None)
+        if run is None:
+            continue
+        group.add_command(
+            as_click_command(run, name=modinfo.name.replace("_", "-"), short_flags=short_flags)
+        )
+    return group
+
+
 def _unwrap_optional(annotation):
     """``Path | None`` → ``Path``; pass through anything else."""
     if annotation is inspect.Parameter.empty:
@@ -228,25 +290,9 @@ def _click_type_for(inner):
     return click.STRING, False
 
 
-# GNU / bioinformatics short flags for auto-generated CLI options.
-# Long names are unchanged; a short form is added when it does not collide.
-# [vendor] This table is spotty's domain vocabulary (gussid, dashboard,
-# summary_json, in_h5ad, ...). It is inert for param names this repo doesn't
-# use, so it is kept verbatim; in the shared package it should become
-# caller-registrable rather than a hardcoded dict.
-_SHORT_BY_PARAM: dict[str, str] = {
-    "in_h5ad": "-i",
-    "h5ads": "-i",
-    "out_h5ad": "-o",
-    "out_csv": "-o",
-    "out_dir": "-o",
-    "gussid": "-g",
-    "dashboard": "-d",
-    "sample_sheet": "-s",
-    "summary_json": "-j",
-}
-
-
+# Short flags are caller-supplied (as_click_command(short_flags=...)); trident
+# ships no domain vocabulary of its own. The long name is always present; a short
+# alias is added only when it does not collide.
 def _flag_names(long: str, short: str | None, used: set[str]) -> list[str]:
     if short and short not in used:
         used.add(short)
@@ -382,7 +428,7 @@ def _run_with_telemetry(fn, kwargs, sources, *, rule_name: str, context: str) ->
     logmsg = _make_logmsg(log_path, tag=rule_name)
     started = time.perf_counter()
 
-    logmsg(f"{__package__ or 'workflow'} dispatcher v{_pkg_version()}")
+    logmsg(f"trident dispatcher v{_pkg_version()}")
     logmsg(f"context: {context} (rule={rule_name})")
     logmsg(f"target: {fn.__module__}.{fn.__qualname__}")
     logmsg("resolved kwargs:")
@@ -507,20 +553,17 @@ def _paths_from_sources(kwargs, sources, kind: str) -> list[Path]:
 
 
 def _classify_by_name(name: str) -> str:
-    """Heuristic for CLI-mode I/O classification.
+    """Generic heuristic for CLI-mode I/O classification by the ``in_``/``out_``
+    prefix convention.
 
-    [vendor] The output suffixes (_pdf, _dashboard, dashboard) are spotty's
-    output vocabulary; harmless here (this repo's outputs are typed Paths bound
-    from snakemake.output in the Snakemake path). Only affects the CLI-mode
-    telemetry's input/output labelling, not correctness.
+    Only affects CLI-mode telemetry's input/output labelling (not correctness):
+    in the Snakemake path, roles come unambiguously from the source namespace
+    (``input`` vs ``output``). A param named neither ``in_*`` nor ``out_*`` is
+    reported as ``other`` and simply not pre-flighted.
     """
     if name.startswith("in_"):
         return "input"
-    if (
-        name.startswith("out_")
-        or name == "dashboard"
-        or name.endswith(("_json", "_pdf", "_csv", "_dashboard"))
-    ):
+    if name.startswith("out_"):
         return "output"
     return "other"
 
@@ -549,8 +592,6 @@ def _fmt_size(num_bytes: int) -> str:
 
 
 def _pkg_version() -> str:
-    try:
-        from bulk_rna_preprocessing import __version__
-    except ImportError:
-        return "?"
-    return __version__
+    # Vendored copy: trident is not installed here, so report the pinned synced
+    # version (kept in step with the provenance header / dispatch-provenance.md).
+    return "0.0.1+vendored"

@@ -99,8 +99,14 @@ profile / PBS), not on a login node.
 ## Test
 
 ```bash
-./run_test.sh --check      # build from test/fixtures/, compare to test/golden/
+pytest test/               # fast unit tests over the library + stage run() functions
+./run_test.sh --check      # end-to-end: build from test/fixtures/, compare to test/golden/
 ```
+
+Two tiers: `test/test_unit.py` imports the library and each stage's `run()` and
+checks them on the committed fixtures with no Snakemake (the payoff of keeping the
+logic in an importable library — see `trident`'s `docs/testing.md`); `run_test.sh
+--check` covers the full DAG + conda envs against `test/golden/`.
 
 A tiny committed synthetic 3-sample cohort (`test/fixtures/`) with a golden
 output (`test/golden/`) produced by this code. `test/compare_h5ad.py` is a

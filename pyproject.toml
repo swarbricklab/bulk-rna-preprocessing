@@ -23,6 +23,10 @@ dependencies = [
     "click>=8.0",
 ]
 
+[project.optional-dependencies]
+# Fast unit tests over the library + stage run() functions (test/test_unit.py).
+tests = ["pytest"]
+
 [project.urls]
 Homepage = "https://github.com/swarbricklab/bulk-rna-preprocessing"
 Repository = "https://github.com/swarbricklab/bulk-rna-preprocessing"
