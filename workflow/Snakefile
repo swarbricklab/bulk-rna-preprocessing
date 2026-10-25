@@ -18,15 +18,27 @@ outs = config["outs"]
 PKG_SRC = str((Path(workflow.basedir).parent / "src").resolve())
 
 
-include: "rules/common.smk"
+# Single helper, defined inline — this workflow is small enough that a separate
+# rules/common.smk would be ceremony. As it grows, move shared helpers there.
+def gene_extra_inputs():
+    """Optional extra inputs for the gene_h5ad rule.
+
+    The clinical obs-join is optional: include deps.clinical in the DAG only when a
+    `params.clinical` block is configured, so the workflow also runs for cohorts
+    without a clinical table.
+    """
+    params = config.get("params") or {}
+    if params.get("clinical"):
+        return [config["deps"]["clinical"]]
+    return []
 
 
 # Each rule runs a 3-line scripts/*.py shim that calls dispatch(run, globals()):
 # the bulk_rna_preprocessing._dispatch dispatcher binds the step's typed run()
 # parameters from these input/output/params namespaces (matched by name) and from
-# config, so the heavy logic stays in the installable library. The package is put
-# on PYTHONPATH by run.sh / run_test.sh (src/ layout); the conda env supplies the
-# scientific deps.
+# config, so the heavy logic stays in the library. The package is put on sys.path
+# inside each job via params.pkg_src (see PKG_SRC above); the conda env supplies
+# the scientific deps.
 rule all:
     input:
         outs["gene_h5ad"],
