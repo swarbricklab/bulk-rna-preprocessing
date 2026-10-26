@@ -33,12 +33,21 @@ bits that an earlier vendoring carried (a hardcoded `_SHORT_BY_PARAM`, JSON-only
 config loader, tool-specific output-name heuristics) were **generalised upstream in
 trident** and are gone here as a result.
 
-## Field finding that still lives here (not in trident): the `--use-conda` gotcha
+## Wiring: one generic shim, routed by rule name
 
-**Snakemake scrubs `PYTHONPATH` for `--use-conda` jobs** (verified: conda
-activation itself preserves it; the job just doesn't receive it). So a non-installed
-src-layout package can't be imported via a `PYTHONPATH` export. Each rule passes
-`params.pkg_src` (the `src/` dir, from `workflow.basedir`) and the shim does
-`sys.path.insert(0, snakemake.params.pkg_src)` *inside* the job. This is documented
-generically in trident's `docs/adopt.md`; the concrete wiring lives in this repo's
-`workflow/Snakefile` + `workflow/scripts/*.py`.
+Every rule runs the same `workflow/scripts/_run.py`, which calls
+`dispatch_by_rule(globals(), "bulk_rna_preprocessing._steps")` — mapping
+`snakemake.rule` to `_steps.<rule>.run` (so **rule name == step module name**; each
+rule carries an `# impl:` breadcrumb). No per-rule shim files; the rule name is the
+pointer to the code.
+
+### The `--use-conda` gotcha (why the shim bootstraps `sys.path`)
+
+**Snakemake scrubs `PYTHONPATH` for `--use-conda` jobs** (verified: conda activation
+itself preserves it; the job just doesn't receive it). So a non-installed src-layout
+package can't be imported via a `PYTHONPATH` export. The shim puts `src/` on
+`sys.path` *inside* the job, deriving it from `snakemake.scriptdir` (the original dir
+of `_run.py`, i.e. `workflow/scripts/` → `../../src`). This keeps the rules free of
+any `params` plumbing — `snakemake.rule` + `snakemake.scriptdir` are the clean,
+purpose-built channels. Documented generically in trident's `docs/adopt.md`; the
+concrete wiring is this repo's `workflow/Snakefile` + `workflow/scripts/_run.py`.
