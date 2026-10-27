@@ -37,10 +37,13 @@ jobs:
         run: bash .tests/ci/setup_placeholders.sh
 
       - name: Dry-run (builds the full DAG + validates config against the schema)
+        # No --workflow-profile here: its `use-conda: True` makes snakemake require a
+        # conda frontend (mamba) even for -n (our rules carry `conda:` directives),
+        # which this lightweight lint env doesn't have and doesn't need — the DAG and
+        # schema validation are independent of the profile.
         run: >-
           snakemake -n
           --snakefile workflow/Snakefile
-          --workflow-profile profiles/workflow
           --configfile .tests/ci/config.yaml
 
       - name: snakefmt check
