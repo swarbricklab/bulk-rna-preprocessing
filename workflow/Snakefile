@@ -46,8 +46,10 @@ rule gene_annotation:
         gene_annotation=outs["gene_annotation"],
     log:
         "logs/bulk-rna-preprocessing/gene_annotation.log",
-    conda:
-        "../env/environment.yaml"
+    # absconda: replaced conda env with container
+    # conda:
+        # "../env/environment.yaml"
+    container: "docker://ghcr.io/swarbricklab/bulk-rna-preprocessing:latest"
     # step:
     #   src/bulk_rna_preprocessing/_steps/gene_annotation.py
     script:
@@ -68,8 +70,10 @@ rule gene:
         gene_h5ad=outs["gene_h5ad"],
     log:
         "logs/bulk-rna-preprocessing/gene.log",
-    conda:
-        "../env/environment.yaml"
+    # absconda: replaced conda env with container
+    # conda:
+        # "../env/environment.yaml"
+    container: "docker://ghcr.io/swarbricklab/bulk-rna-preprocessing:latest"
     # step:
     #   src/bulk_rna_preprocessing/_steps/gene.py
     script:
@@ -85,8 +89,10 @@ rule transcript:
         transcript_h5ad=outs["transcript_h5ad"],
     log:
         "logs/bulk-rna-preprocessing/transcript.log",
-    conda:
-        "../env/environment.yaml"
+    # absconda: replaced conda env with container
+    # conda:
+        # "../env/environment.yaml"
+    container: "docker://ghcr.io/swarbricklab/bulk-rna-preprocessing:latest"
     # step:
     #   src/bulk_rna_preprocessing/_steps/transcript.py
     script:
