@@ -27,6 +27,10 @@ dependencies = [
 # Fast unit tests over the library + stage run() functions (test/test_unit.py).
 tests = ["pytest"]
 
+[project.scripts]
+# Console command for running a single stage manually (the same code the rules run).
+brp = "bulk_rna_preprocessing._cli:cli"
+
 [project.urls]
 Homepage = "https://github.com/swarbricklab/bulk-rna-preprocessing"
 Repository = "https://github.com/swarbricklab/bulk-rna-preprocessing"
