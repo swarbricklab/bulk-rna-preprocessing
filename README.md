@@ -54,9 +54,9 @@ src/bulk_rna_preprocessing/
   _dispatch.py                  # binds run() from snakemake OR CLI (vendored; see docs/dev)
   _cli.py  __main__.py          # CLI built from the same run() signatures
 workflow/
-  Snakefile                     # rules: gene_annotation -> gene_h5ad; transcript_h5ad
+  Snakefile                     # rules: gene_annotation -> gene; transcript (rule name == step module)
   rules/common.smk
-  scripts/{gene_annotation,gene,transcript}.py  # 3-line script: shims -> dispatch()
+  scripts/_run.py               # one generic shim -> dispatch_by_rule() (snakemake.rule -> _steps.<rule>.run)
   schemas/config.schema.yaml    # validated at workflow start
 profiles/workflow/config.yaml   # per-rule resources, use-conda
 test/                           # self-contained synthetic fixture + golden + comparator
