@@ -41,7 +41,11 @@ jobs:
           python-version: "3.11"
 
       - name: Install absconda
-        run: pip install absconda
+        # PyPI only has absconda 0.1.0, which fails to load its bundled Jinja
+        # _templates ("MultiplexedPath(.../absconda/_templates) is not a file").
+        # Install from the public repo (0.2.8) until a newer release is on PyPI,
+        # then switch this back to `pip install "absconda>=0.2.8"`.
+        run: pip install "absconda @ git+https://github.com/swarbricklab/absconda.git@fe864cd"
 
       - name: Validate the environment file
         run: absconda validate --file env/environment.yaml
