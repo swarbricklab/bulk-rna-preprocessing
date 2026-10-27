@@ -1,5 +1,10 @@
 # bulk-rna-preprocessing
 
+[![CI](https://github.com/swarbricklab/bulk-rna-preprocessing/actions/workflows/ci.yml/badge.svg)](https://github.com/swarbricklab/bulk-rna-preprocessing/actions/workflows/ci.yml)
+[![Snakemake](https://img.shields.io/badge/snakemake-%E2%89%A57.32.0-brightgreen.svg)](https://snakemake.github.io)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Code style: snakefmt](https://img.shields.io/badge/code%20style-snakefmt-000000.svg)](https://github.com/snakemake/snakefmt)
+
 A small, reusable [Snakemake](https://snakemake.github.io) workflow that
 aggregates a tree of per-sample [Salmon](https://combine-lab.github.io/salmon/)
 quantifications into **gene-** and **transcript-level** AnnData (`.h5ad`) objects
