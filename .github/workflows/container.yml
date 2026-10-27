@@ -1,0 +1,84 @@
+name: container
+
+# Build the aggregation conda environment (env/environment.yaml) into an OCI image
+# with absconda (https://github.com/swarbricklab/absconda) and publish it to GHCR.
+#
+# This is phase 1 of containerisation: PUBLISH the env image. On pull requests we
+# BUILD ONLY (no push), so the absconda build is validated without minting a
+# package; on main / version tags we build AND push (:latest, :sha-<short>, and on
+# tags the :<semver>). Phase 2 — rewriting the workflow's per-rule `conda:` lines to
+# `container:` pointing at this image (via `absconda workflow apply`) — is a
+# follow-up; see docs/dev/containerisation.md.
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+    paths:
+      - "env/environment.yaml"
+      - ".github/workflows/container.yml"
+  pull_request:
+    paths:
+      - "env/environment.yaml"
+      - ".github/workflows/container.yml"
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  build:
+    name: absconda build + publish (GHCR)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install absconda
+        run: pip install absconda
+
+      - name: Validate the environment file
+        run: absconda validate --file env/environment.yaml
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        # Only authenticate when we intend to push (never on PRs from forks).
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build (PR) / build + push (main, tags)
+        run: |
+          set -euo pipefail
+          # GHCR requires a lowercase repository path.
+          repo=$(printf '%s/%s' "${REGISTRY}" "${IMAGE_NAME}" | tr '[:upper:]' '[:lower:]')
+
+          tags=(--tag "sha-${GITHUB_SHA::12}")
+          if [ "${GITHUB_REF}" = "refs/heads/main" ]; then
+            tags+=(--tag latest)
+          fi
+          if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
+            tags+=(--tag "${GITHUB_REF#refs/tags/v}" --tag latest)
+          fi
+
+          push=""
+          if [ "${{ github.event_name }}" != "pull_request" ]; then
+            push="--push"
+          fi
+
+          echo "Building ${repo} ${tags[*]} ${push}"
+          absconda build \
+            --file env/environment.yaml \
+            --repository "${repo}" \
+            "${tags[@]}" \
+            ${push}
