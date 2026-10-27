@@ -64,6 +64,14 @@ test/                           # self-contained synthetic fixture + golden + co
 run.sh  run_test.sh
 ```
 
+## Rule graph
+
+![rule graph](docs/rulegraph.svg)
+
+`gene_annotation` → `gene`, plus `transcript`, all feeding `all`. Every rule runs
+the generic `scripts/_run.py` shim, which `dispatch_by_rule` routes to the matching
+`_steps/<rule>.run` (see the `# step:` breadcrumb on each rule).
+
 ## Configure
 
 Everything dataset-specific is in `config/config.yaml` (schema:

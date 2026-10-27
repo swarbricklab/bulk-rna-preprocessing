@@ -1,0 +1,80 @@
+name: CI
+
+# Everything runs on GitHub-hosted runners. Unlike sc_pileup / snp_demux — whose
+# reproduce step needs NCI-only singularity images + DVC and so runs on a
+# self-hosted runner — this workflow's test data is tiny, synthetic and committed
+# (test/fixtures/ + test/golden/), so even the end-to-end reproduce runs here.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  validate:
+    name: lint + dry-run (data-independent)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash -el {0}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: mamba-org/setup-micromamba@v2
+        with:
+          environment-name: ci
+          # snakefmt pinned so the format check is reproducible.
+          create-args: >-
+            snakemake=7.32.4
+            snakefmt=2.1.0
+            go-shfmt=3.14.1
+            jsonschema
+          condarc: |
+            channels:
+              - conda-forge
+              - bioconda
+
+      - name: Touch placeholder inputs
+        run: bash .tests/ci/setup_placeholders.sh
+
+      - name: Dry-run (builds the full DAG + validates config against the schema)
+        run: >-
+          snakemake -n
+          --snakefile workflow/Snakefile
+          --workflow-profile profiles/workflow
+          --configfile .tests/ci/config.yaml
+
+      - name: snakefmt check
+        run: snakefmt --check workflow/
+
+      - name: snakemake lint (informational)
+        continue-on-error: true
+        run: snakemake --lint --snakefile workflow/Snakefile --configfile .tests/ci/config.yaml
+
+  test:
+    name: reproduce on synthetic fixtures
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash -el {0}
+    steps:
+      - uses: actions/checkout@v4
+
+      # The workflow env (snakemake + the scientific stack) from env/environment.yaml.
+      - uses: mamba-org/setup-micromamba@v2
+        with:
+          environment-name: brp
+          environment-file: env/environment.yaml
+
+      - name: Install the package (the CLI + the shims import it)
+        run: pip install -e ".[tests]"
+
+      - name: Unit tests (library + stage run() functions + golden)
+        run: pytest test/ -q
+
+      - name: End-to-end — build the fixtures and compare to the golden
+        # One env has every dep, so run the rules directly (no --use-conda / no
+        # per-rule env build); this exercises the real DAG + shims + dispatch_by_rule.
+        run: |
+          snakemake --snakefile workflow/Snakefile --configfile test/config.yaml --cores 2
+          python test/compare_h5ad.py test/golden/gene_counts.h5ad test/out/gene_counts.h5ad
+          python test/compare_h5ad.py test/golden/transcript_counts.h5ad test/out/transcript_counts.h5ad
