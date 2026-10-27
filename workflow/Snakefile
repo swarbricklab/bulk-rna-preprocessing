@@ -50,7 +50,7 @@ rule gene_annotation:
     # conda:
     # "../env/environment.yaml"
     container:
-        "docker://ghcr.io/swarbricklab/bulk-rna-preprocessing:latest"
+        "docker://ghcr.io/swarbricklab/bulk-rna-preprocessing@sha256:4d92c05f24d0147f06a9631f52fde2ed26bf8c3d27f106c7bb09f6cb9c184e05"
     # step:
     #   src/bulk_rna_preprocessing/_steps/gene_annotation.py
     script:
@@ -75,7 +75,7 @@ rule gene:
     # conda:
     # "../env/environment.yaml"
     container:
-        "docker://ghcr.io/swarbricklab/bulk-rna-preprocessing:latest"
+        "docker://ghcr.io/swarbricklab/bulk-rna-preprocessing@sha256:4d92c05f24d0147f06a9631f52fde2ed26bf8c3d27f106c7bb09f6cb9c184e05"
     # step:
     #   src/bulk_rna_preprocessing/_steps/gene.py
     script:
@@ -95,7 +95,7 @@ rule transcript:
     # conda:
     # "../env/environment.yaml"
     container:
-        "docker://ghcr.io/swarbricklab/bulk-rna-preprocessing:latest"
+        "docker://ghcr.io/swarbricklab/bulk-rna-preprocessing@sha256:4d92c05f24d0147f06a9631f52fde2ed26bf8c3d27f106c7bb09f6cb9c184e05"
     # step:
     #   src/bulk_rna_preprocessing/_steps/transcript.py
     script:
