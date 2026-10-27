@@ -45,7 +45,7 @@ above, `var` index = transcript IDs. No annotation / UQN / clinical join.
 
 ```
 config/config.yaml              # configuration template (parameterised)
-pyproject.toml                  # installable package (src/ layout; CLI via python -m)
+pyproject.toml                  # installable package (src/ layout; `brp` console command)
 env/environment.yaml            # conda env for the aggregation step
 containers/Dockerfile           # containerised CLI
 src/bulk_rna_preprocessing/
@@ -85,16 +85,52 @@ clinical obs columns.
 # as a submodule, point at the parent repo's config
 BULK_RNA_PREPROCESSING_CONFIG=/path/to/parent/config.yaml ./run.sh
 
-# or drive a single stage via the CLI (one process, no Snakemake); the Snakemake
-# shims and this CLI are built from the same typed step functions
-PYTHONPATH=src python -m bulk_rna_preprocessing gene-annotation \
-    --config config/config.yaml --gencode-gtf ... --gene-annotation ...
-#   sub-commands: gene-annotation | gene | transcript  (see --help)
+# or run a single stage by hand via the CLI (one process, no Snakemake) — see below
+brp --help
 ```
 
 The aggregation reads every per-sample quant file into memory, so on a full
 cohort it is the memory-heavy step — run it via your cluster scheduler (the NCI
 profile / PBS), not on a login node.
+
+## Running a stage manually (CLI)
+
+Each stage is also a CLI subcommand, built from the *same* typed `run()` the
+Snakemake rules dispatch to (via `_dispatch.build_cli`), so the CLI and the
+workflow can't drift. Use it to run or debug one stage without Snakemake.
+
+Invoke it as the installed console command, or from a checkout via `python -m`:
+
+```bash
+pip install .            # -> the `brp` command
+brp --help
+
+# from a checkout without installing:
+PYTHONPATH=src python -m bulk_rna_preprocessing --help
+```
+
+Three subcommands; every option is derived from the step's signature. Paths are
+required; `-c/--config` takes the workflow config as **YAML or JSON** (only the
+stages that read `params`/`deps.clinical` need it); `-l/--log` mirrors the
+telemetry banner to a file.
+
+```bash
+# 1. GENCODE GTF -> gene annotation TSV (run first; no config needed)
+brp gene-annotation -g gencode.v39.annotation.gtf.gz -a genes.tsv
+
+# 2. gene-level counts -> annotated, UQN-normalised h5ad
+brp gene -i counts/individual -s samplesheet.csv \
+    --hgnc-complete-set hgnc_complete_set.txt \
+    -a genes.tsv -o gene_counts.h5ad -c config/config.yaml
+
+# 3. transcript-level counts -> h5ad
+brp transcript -i counts/individual -s samplesheet.csv \
+    -o transcript_counts.h5ad -c config/config.yaml
+```
+
+Short flags: `-i` counts dir, `-s` samplesheet, `-g` GENCODE GTF, `-a` annotation
+TSV, `-o` output h5ad, `-c` config, `-l` log (long names always work too; see
+`brp <step> --help`).
 
 ## Test
 

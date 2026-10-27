@@ -2,7 +2,7 @@
 
 `Dockerfile` builds an image carrying the python stack (anndata / pandas / numpy
 / pyyaml / h5py) plus the installed `bulk_rna_preprocessing` package, with its CLI
-(`python -m bulk_rna_preprocessing`) as the entrypoint:
+(the `brp` command) as the entrypoint:
 
 ```
 docker build -t ghcr.io/swarbricklab/bulk-rna-preprocessing:dev -f containers/Dockerfile .

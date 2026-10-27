@@ -16,4 +16,5 @@ ARG MAMBA_DOCKERFILE_ACTIVATE=1
 RUN pip install /opt/bulk-rna-preprocessing
 
 ENV PATH=/opt/conda/bin:$PATH
-ENTRYPOINT ["python", "-m", "bulk_rna_preprocessing"]
+# `pip install .` above provides the `brp` console command on PATH.
+ENTRYPOINT ["brp"]
