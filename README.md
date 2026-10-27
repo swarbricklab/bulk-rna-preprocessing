@@ -14,13 +14,15 @@ standalone extraction of the `preprocessing` stage that lived inside
 `brca_mega_atlas-data`.
 
 **Assay / subtyper-agnostic.** This stage stamps generic gene identifiers only
-(`gene_name`, `gene_type`, `hgnc_id`, `entrez_id`). It deliberately does **not**
-stamp PAM50-classifier columns (`is_pam50` / `pam50_symbol` / `in_proliferation`)
-and has **no** `pam50_annotation.txt` dependency: downstream PAM50 subtyping
-([intrinsix](https://github.com/swarbricklab/intrinsix)) self-identifies its 50
-genes from `var.entrez_id`.
+(`gene_name`, `gene_type`, `hgnc_id`, `entrez_id`).
 
 ## Outputs
+
+Each output is an [AnnData](https://anndata.readthedocs.io/) object — a counts
+matrix `X` with per-row (`obs`) and per-column (`var`) annotation and extra
+same-shaped `layers`:
+
+![AnnData layout](docs/anndata_layout.svg)
 
 `gene_counts.h5ad`
 

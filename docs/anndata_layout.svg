@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 440" font-family="'DejaVu Sans', Arial, Helvetica, sans-serif">
+  <style>
+    .h   { font-size: 15px; font-weight: bold; }
+    .t   { font-size: 12.5px; }
+    .s   { font-size: 11px; fill: #444; }
+    .mono{ font-family: 'DejaVu Sans Mono', Menlo, Consolas, monospace; }
+  </style>
+
+  <rect x="0" y="0" width="720" height="440" fill="white"/>
+
+  <!-- ===== var (columns = genes) : annotation + top bar ===== -->
+  <text class="h"  x="380" y="26"  text-anchor="middle" fill="#b5651d">var — genes (columns)</text>
+  <text class="s mono" x="380" y="44" text-anchor="middle">index = gene IDs (versioned ENSG)</text>
+  <text class="s mono" x="380" y="60" text-anchor="middle">Length · gene_name · gene_type · hgnc_id · entrez_id</text>
+
+  <rect x="200" y="78" width="360" height="34" rx="4" fill="#ffe3c2" stroke="#e08a2e"/>
+  <text class="t" x="380" y="100" text-anchor="middle" fill="#8a4b12">var  (gene annotations)</text>
+
+  <!-- ===== obs (rows = samples) : left bar ===== -->
+  <rect x="150" y="118" width="46" height="210" rx="4" fill="#d7f0d0" stroke="#4a9e3f"/>
+  <text class="t" x="173" y="223" text-anchor="middle" fill="#2e7d32"
+        transform="rotate(-90 173 223)">obs  (sample annotations)</text>
+
+  <!-- ===== X matrix (+ layers) ===== -->
+  <rect x="200" y="118" width="360" height="210" rx="4" fill="#cfe8fb" stroke="#2b7bba"/>
+  <text class="h"  x="380" y="190" text-anchor="middle" fill="#1b5e8a" font-size="20">X</text>
+  <text class="t mono" x="380" y="214" text-anchor="middle" fill="#1b5e8a">n_obs &#215; n_var</text>
+  <text class="t"  x="380" y="240" text-anchor="middle">NumReads — raw counts (float32)</text>
+  <line x1="248" y1="262" x2="512" y2="262" stroke="#8fbfe0"/>
+  <text class="s"  x="380" y="282" text-anchor="middle">layers (same shape as X):</text>
+  <text class="s mono" x="380" y="300" text-anchor="middle">tpm · eff_length · uqn · log2_uqn</text>
+
+  <!-- ===== obs (rows = samples) : annotation ===== -->
+  <text class="h"  x="150" y="366" fill="#2e7d32">obs — samples (rows)</text>
+  <text class="s mono" x="150" y="386">index = sample_id  (the per-sample quant subdir name)</text>
+  <text class="s mono" x="150" y="402">donor_id · tissue_id · … (obs_from_samplesheet)  + optional clinical cols</text>
+
+  <!-- footnote -->
+  <text class="s" x="150" y="428" fill="#777">Shown: gene_counts.h5ad. transcript_counts.h5ad = X + tpm/eff_length only.</text>
+</svg>
