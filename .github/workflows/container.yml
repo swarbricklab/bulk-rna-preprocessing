@@ -45,7 +45,7 @@ jobs:
         # _templates ("MultiplexedPath(.../absconda/_templates) is not a file").
         # Install from the public repo (0.2.8) until a newer release is on PyPI,
         # then switch this back to `pip install "absconda>=0.2.8"`.
-        run: pip install "absconda @ git+https://github.com/swarbricklab/absconda.git@fe864cd"
+        run: pip install "absconda @ git+https://github.com/swarbricklab/absconda.git@7798a65a1"
 
       - name: Validate the environment file
         run: absconda validate --file env/environment.yaml
