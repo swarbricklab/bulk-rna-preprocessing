@@ -48,8 +48,9 @@ rule gene_annotation:
         "logs/bulk-rna-preprocessing/gene_annotation.log",
     # absconda: replaced conda env with container
     # conda:
-        # "../env/environment.yaml"
-    container: "docker://ghcr.io/swarbricklab/bulk-rna-preprocessing:latest"
+    # "../env/environment.yaml"
+    container:
+        "docker://ghcr.io/swarbricklab/bulk-rna-preprocessing:latest"
     # step:
     #   src/bulk_rna_preprocessing/_steps/gene_annotation.py
     script:
@@ -72,8 +73,9 @@ rule gene:
         "logs/bulk-rna-preprocessing/gene.log",
     # absconda: replaced conda env with container
     # conda:
-        # "../env/environment.yaml"
-    container: "docker://ghcr.io/swarbricklab/bulk-rna-preprocessing:latest"
+    # "../env/environment.yaml"
+    container:
+        "docker://ghcr.io/swarbricklab/bulk-rna-preprocessing:latest"
     # step:
     #   src/bulk_rna_preprocessing/_steps/gene.py
     script:
@@ -91,8 +93,9 @@ rule transcript:
         "logs/bulk-rna-preprocessing/transcript.log",
     # absconda: replaced conda env with container
     # conda:
-        # "../env/environment.yaml"
-    container: "docker://ghcr.io/swarbricklab/bulk-rna-preprocessing:latest"
+    # "../env/environment.yaml"
+    container:
+        "docker://ghcr.io/swarbricklab/bulk-rna-preprocessing:latest"
     # step:
     #   src/bulk_rna_preprocessing/_steps/transcript.py
     script:
