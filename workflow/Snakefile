@@ -44,10 +44,10 @@ rule gene_annotation:
         gencode_gtf=deps["gencode_gtf"],
     output:
         gene_annotation=outs["gene_annotation"],
-    conda:
-        "../env/environment.yaml"
     log:
         "logs/bulk-rna-preprocessing/gene_annotation.log",
+    conda:
+        "../env/environment.yaml"
     # step:
     #   src/bulk_rna_preprocessing/_steps/gene_annotation.py
     script:
@@ -66,10 +66,10 @@ rule gene:
         clinical=gene_extra_inputs(),
     output:
         gene_h5ad=outs["gene_h5ad"],
-    conda:
-        "../env/environment.yaml"
     log:
         "logs/bulk-rna-preprocessing/gene.log",
+    conda:
+        "../env/environment.yaml"
     # step:
     #   src/bulk_rna_preprocessing/_steps/gene.py
     script:
@@ -83,10 +83,10 @@ rule transcript:
         samplesheet=deps["samplesheet"],
     output:
         transcript_h5ad=outs["transcript_h5ad"],
-    conda:
-        "../env/environment.yaml"
     log:
         "logs/bulk-rna-preprocessing/transcript.log",
+    conda:
+        "../env/environment.yaml"
     # step:
     #   src/bulk_rna_preprocessing/_steps/transcript.py
     script:
