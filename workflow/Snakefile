@@ -40,7 +40,6 @@ rule all:
 
 rule gene_annotation:
     """GENCODE GTF -> gene-level annotation TSV (gene_id, gene_name, gene_type, hgnc_id)."""
-    # impl: src/bulk_rna_preprocessing/_steps/gene_annotation.py
     input:
         gencode_gtf=deps["gencode_gtf"],
     output:
@@ -49,13 +48,14 @@ rule gene_annotation:
         "../env/environment.yaml"
     log:
         "logs/bulk-rna-preprocessing/gene_annotation.log",
+    # step:
+    #   src/bulk_rna_preprocessing/_steps/gene_annotation.py
     script:
         "scripts/_run.py"
 
 
 rule gene:
     """Aggregate gene-level Salmon quants -> annotated, UQN-normalised gene_counts.h5ad."""
-    # impl: src/bulk_rna_preprocessing/_steps/gene.py
     input:
         gene_annotation=outs["gene_annotation"],
         counts_dir=deps["counts_dir"],
@@ -70,13 +70,14 @@ rule gene:
         "../env/environment.yaml"
     log:
         "logs/bulk-rna-preprocessing/gene.log",
+    # step:
+    #   src/bulk_rna_preprocessing/_steps/gene.py
     script:
         "scripts/_run.py"
 
 
 rule transcript:
     """Aggregate transcript-level Salmon quants -> transcript_counts.h5ad (no annotation/UQN)."""
-    # impl: src/bulk_rna_preprocessing/_steps/transcript.py
     input:
         counts_dir=deps["counts_dir"],
         samplesheet=deps["samplesheet"],
@@ -86,5 +87,7 @@ rule transcript:
         "../env/environment.yaml"
     log:
         "logs/bulk-rna-preprocessing/transcript.log",
+    # step:
+    #   src/bulk_rna_preprocessing/_steps/transcript.py
     script:
         "scripts/_run.py"
