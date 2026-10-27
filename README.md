@@ -51,24 +51,43 @@ above, `var` index = transcript IDs. No annotation / UQN / clinical join.
 ## Layout
 
 ```
-config/config.yaml              # configuration template (parameterised)
-pyproject.toml                  # installable package (src/ layout; `brp` console command)
-env/environment.yaml            # conda env for the aggregation step
-containers/Dockerfile           # containerised CLI
-src/bulk_rna_preprocessing/
-  lib.py                        # the library (counting / UQN / annotation / join)
-  _steps/{gene_annotation,gene,transcript}.py  # one typed run() per stage
-  _dispatch.py                  # binds run() from snakemake OR CLI (vendored; see docs/dev)
-  _cli.py  __main__.py          # CLI built from the same run() signatures
-workflow/
-  Snakefile                     # rules: gene_annotation -> gene; transcript (rule name == step module)
-  rules/common.smk
-  scripts/_run.py               # one generic shim -> dispatch_by_rule() (snakemake.rule -> _steps.<rule>.run)
-  schemas/config.schema.yaml    # validated at workflow start
-profiles/workflow/config.yaml   # per-rule resources, use-conda
-test/                           # self-contained synthetic fixture + golden + comparator
-.tests/ci/                      # data-independent CI config + placeholder setup
-run.sh  run_test.sh
+.
+├── config/config.yaml                 # configuration template (parameterised)
+├── run.sh · run_test.sh               # run standalone · run the test (+ --check)
+│
+├── src/bulk_rna_preprocessing/        # installable package: library + CLI
+│   ├── lib.py                         # the library (counting / UQN / annotation / join)
+│   ├── _steps/                        # one typed run() per stage (single source of truth)
+│   │   ├── gene_annotation.py
+│   │   ├── gene.py
+│   │   └── transcript.py
+│   ├── _dispatch.py                   # binds run() from Snakemake OR CLI (vendored trident; see docs/dev)
+│   ├── _cli.py                        # `brp` CLI, built from the step signatures (build_cli)
+│   └── __main__.py                    # python -m bulk_rna_preprocessing
+│
+├── workflow/
+│   ├── Snakefile                      # rules gene_annotation → gene; transcript (rule name == step module)
+│   ├── scripts/_run.py                # one generic shim → dispatch_by_rule()
+│   └── schemas/config.schema.yaml     # validated at workflow start
+├── profiles/workflow/config.yaml      # per-rule resources, use-conda
+│
+├── env/environment.yaml               # conda env for the aggregation step
+├── containers/Dockerfile              # containerised CLI (brp entrypoint)
+├── pyproject.toml                     # package metadata + `brp` console command
+├── CITATION.cff
+│
+├── .tests/                            # Snakemake-convention test root
+│   ├── ci/                            # data-independent: placeholders + config (dry-run/lint)
+│   └── integration/                   # data-dependent golden test
+│       ├── fixtures/                  # tiny synthetic 3-sample Salmon cohort (committed)
+│       ├── golden/                    # expected outputs (committed)
+│       ├── config.yaml
+│       ├── test_unit.py · conftest.py # fast unit tests (library + run()s, no Snakemake)
+│       └── compare_h5ad.py            # NaN-aware h5ad comparator
+├── .github/workflows/ci.yml           # hosted CI: lint/dry-run + reproduce on the fixtures
+└── docs/
+    ├── anndata_layout.svg · rulegraph.svg
+    └── dev/dispatch-provenance.md     # vendored-dispatcher provenance + re-sync notes
 ```
 
 ## Rule graph
@@ -150,20 +169,21 @@ TSV, `-o` output h5ad, `-c` config, `-l` log (long names always work too; see
 ## Test
 
 ```bash
-pytest test/               # fast unit tests over the library + stage run() functions
-./run_test.sh --check      # end-to-end: build from test/fixtures/, compare to test/golden/
+pytest .tests/integration/   # fast unit tests over the library + stage run() functions
+./run_test.sh --check        # end-to-end: build from the fixtures, compare to the golden
 ```
 
-Two tiers: `test/test_unit.py` imports the library and each stage's `run()` and
-checks them on the committed fixtures with no Snakemake (the payoff of keeping the
-logic in an importable library — see `trident`'s `docs/testing.md`); `run_test.sh
---check` covers the full DAG + conda envs against `test/golden/`.
+Tests live under `.tests/` (the Snakemake convention), in two tiers:
 
-A tiny committed synthetic 3-sample cohort (`test/fixtures/`) with a golden
-output (`test/golden/`) produced by this code. `test/compare_h5ad.py` is a
-NaN-aware h5ad comparator (shapes, X/layer max-abs-diff, obs/var column equality;
-`--ignore-var-cols` for deliberately-changed columns). `.tests/ci/` holds a
-data-independent config + `setup_placeholders.sh` for lint / schema / dry-run CI.
+- **`.tests/integration/`** — the data-dependent test. `test_unit.py` imports the
+  library and each stage's `run()` and checks them on the committed fixtures with no
+  Snakemake (the payoff of keeping the logic in an importable library — see
+  `trident`'s `docs/testing.md`); `run_test.sh --check` covers the full DAG + conda
+  envs against `golden/`. A tiny committed synthetic 3-sample cohort
+  (`fixtures/`) + golden outputs (`golden/`); `compare_h5ad.py` is a NaN-aware h5ad
+  comparator (shapes, X/layer max-abs-diff, obs/var column equality).
+- **`.tests/ci/`** — a data-independent config + `setup_placeholders.sh` for the
+  lint / schema / dry-run CI job.
 
 ## Provenance
 

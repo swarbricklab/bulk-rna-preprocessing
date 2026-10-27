@@ -3,7 +3,7 @@ name: CI
 # Everything runs on GitHub-hosted runners. Unlike sc_pileup / snp_demux — whose
 # reproduce step needs NCI-only singularity images + DVC and so runs on a
 # self-hosted runner — this workflow's test data is tiny, synthetic and committed
-# (test/fixtures/ + test/golden/), so even the end-to-end reproduce runs here.
+# (.tests/integration/fixtures/ + .tests/integration/golden/), so even the end-to-end reproduce runs here.
 on:
   push:
     branches: [main]
@@ -72,12 +72,12 @@ jobs:
         run: pip install -e ".[tests]"
 
       - name: Unit tests (library + stage run() functions + golden)
-        run: pytest test/ -q
+        run: pytest .tests/integration/ -q
 
       - name: End-to-end — build the fixtures and compare to the golden
         # One env has every dep, so run the rules directly (no --use-conda / no
         # per-rule env build); this exercises the real DAG + shims + dispatch_by_rule.
         run: |
-          snakemake --snakefile workflow/Snakefile --configfile test/config.yaml --cores 2
-          python test/compare_h5ad.py test/golden/gene_counts.h5ad test/out/gene_counts.h5ad
-          python test/compare_h5ad.py test/golden/transcript_counts.h5ad test/out/transcript_counts.h5ad
+          snakemake --snakefile workflow/Snakefile --configfile .tests/integration/config.yaml --cores 2
+          python .tests/integration/compare_h5ad.py .tests/integration/golden/gene_counts.h5ad .tests/integration/out/gene_counts.h5ad
+          python .tests/integration/compare_h5ad.py .tests/integration/golden/transcript_counts.h5ad .tests/integration/out/transcript_counts.h5ad

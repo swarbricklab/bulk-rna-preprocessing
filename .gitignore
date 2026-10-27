@@ -1,5 +1,5 @@
 # outputs / scratch
-/test/out/
+/.tests/integration/out/
 /logs/
 __pycache__/
 *.pyc
