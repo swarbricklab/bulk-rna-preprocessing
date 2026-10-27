@@ -51,24 +51,42 @@ above, `var` index = transcript IDs. No annotation / UQN / clinical join.
 ## Layout
 
 ```
-config/config.yaml              # configuration template (parameterised)
-pyproject.toml                  # installable package (src/ layout; `brp` console command)
-env/environment.yaml            # conda env for the aggregation step
-containers/Dockerfile           # containerised CLI
-src/bulk_rna_preprocessing/
-  lib.py                        # the library (counting / UQN / annotation / join)
-  _steps/{gene_annotation,gene,transcript}.py  # one typed run() per stage
-  _dispatch.py                  # binds run() from snakemake OR CLI (vendored; see docs/dev)
-  _cli.py  __main__.py          # CLI built from the same run() signatures
-workflow/
-  Snakefile                     # rules: gene_annotation -> gene; transcript (rule name == step module)
-  rules/common.smk
-  scripts/_run.py               # one generic shim -> dispatch_by_rule() (snakemake.rule -> _steps.<rule>.run)
-  schemas/config.schema.yaml    # validated at workflow start
-profiles/workflow/config.yaml   # per-rule resources, use-conda
-test/                           # self-contained synthetic fixture + golden + comparator
-.tests/ci/                      # data-independent CI config + placeholder setup
-run.sh  run_test.sh
+.
+├── config/config.yaml                 # configuration template (parameterised)
+├── run.sh · run_test.sh               # run standalone · run the test (+ --check)
+│
+├── src/bulk_rna_preprocessing/        # installable package: library + CLI
+│   ├── lib.py                         # the library (counting / UQN / annotation / join)
+│   ├── _steps/                        # one typed run() per stage (single source of truth)
+│   │   ├── gene_annotation.py
+│   │   ├── gene.py
+│   │   └── transcript.py
+│   ├── _dispatch.py                   # binds run() from Snakemake OR CLI (vendored trident; see docs/dev)
+│   ├── _cli.py                        # `brp` CLI, built from the step signatures (build_cli)
+│   └── __main__.py                    # python -m bulk_rna_preprocessing
+│
+├── workflow/
+│   ├── Snakefile                      # rules gene_annotation → gene; transcript (rule name == step module)
+│   ├── scripts/_run.py                # one generic shim → dispatch_by_rule()
+│   └── schemas/config.schema.yaml     # validated at workflow start
+├── profiles/workflow/config.yaml      # per-rule resources, use-conda
+│
+├── env/environment.yaml               # conda env for the aggregation step
+├── containers/Dockerfile              # containerised CLI (brp entrypoint)
+├── pyproject.toml                     # package metadata + `brp` console command
+├── CITATION.cff
+│
+├── test/                              # self-contained synthetic test
+│   ├── fixtures/                      # tiny synthetic 3-sample Salmon cohort (committed)
+│   ├── golden/                        # expected outputs (committed)
+│   ├── config.yaml                    # test run config
+│   ├── test_unit.py · conftest.py     # fast unit tests (library + run()s, no Snakemake)
+│   └── compare_h5ad.py                # NaN-aware h5ad comparator
+├── .tests/ci/                         # data-independent CI config + placeholder setup
+├── .github/workflows/ci.yml           # hosted CI: lint/dry-run + reproduce on the fixtures
+└── docs/
+    ├── anndata_layout.svg · rulegraph.svg
+    └── dev/dispatch-provenance.md     # vendored-dispatcher provenance + re-sync notes
 ```
 
 ## Rule graph
